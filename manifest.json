@@ -1,0 +1,43 @@
+{
+    "name": "Translation",
+    "version": "1",
+    "manifest_version": 3,
+    "description": "all to translate",
+    "background": {
+        "service_worker": "event-page.js",
+        "type": "module"
+    },
+    "action": {
+        "default_popup": "popup.html",
+        "default_title": "Translation",
+        "default_position": "center",
+        "default_icon": {
+            "128": "images/icon128.png",
+            "16": "images/icon16.png",
+            "48": "images/icon48.png"
+        }
+    },
+    "options_page": "options.html",
+    "permissions": [
+        "contextMenus",
+        "storage",
+        "scripting",
+        "activeTab",
+        "tts",
+        "management"
+    ],
+    "content_scripts": [
+        {
+            "matches": [
+                "https://*/*",
+                "http://*/*"
+            ],
+            "js": [
+                "context.js"
+            ],
+            "css": [
+                "contextStyle.css"
+            ]
+        }
+    ]
+}
