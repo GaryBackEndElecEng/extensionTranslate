@@ -23,8 +23,7 @@
         "storage",
         "scripting",
         "activeTab",
-        "tts",
-        "management"
+        "tts"
     ],
     "content_scripts": [
         {
@@ -34,9 +33,6 @@
             ],
             "js": [
                 "context.js"
-            ],
-            "css": [
-                "contextStyle.css"
             ]
         }
     ]
