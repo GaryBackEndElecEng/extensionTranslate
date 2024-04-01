@@ -25,9 +25,9 @@ let menuitemTwo = {
   title: "speak",
   contexts: ["selection"],
 };
-let googleTranslate = {
-  id: "googleTrans",
-  title: "open Google translate",
+let addtonotes = {
+  id: "addToNotes",
+  title: "adds text to tasks",
   contexts: ["selection"],
 };
 chrome.runtime.onInstalled.addListener(() => {
@@ -35,14 +35,14 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create(menulangEn);
   chrome.contextMenus.create(menulangSp);
   chrome.contextMenus.create(menuitemTwo);
-  chrome.contextMenus.create(googleTranslate);
+  chrome.contextMenus.create(addtonotes);
   //BELOW WHEN OPENING UP ANOTHER CHROME WINDOW, IT EXECUTES THE CONTEXT PAGE
-  chrome.action.onClicked.addListener((tab) => {
-    chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      files: ["context.js"],
-    });
-  });
+  //   chrome.action.onClicked.addListener((tab) => {
+  //     chrome.scripting.executeScript({
+  //       target: { tabId: tab.id },
+  //       files: ["context.js"],
+  //     });
+  //   });
 });
 
 chrome.contextMenus.onClicked.addListener((res) => {
@@ -55,19 +55,21 @@ chrome.contextMenus.onClicked.addListener((res) => {
       tranStart.translateAction(res.selectionText, "english");
     } else if (res.menuItemId === "speak") {
       start.speakAction(res.selectionText);
-    } else if (res.menuItemId === "googleTrans") {
-      googleStart.googleAction(res.selectionText, "engilsh");
+    } else if (res.menuItemId === "addToNotes") {
+      console.log("selected executing method");
+      addNotes.addToNotesAction(res.selectionText);
     }
   }
 });
 
 class Translate {
   _translations = [];
-  _translation = { lang: "", translate: { from: "", to: "" } };
+  _translation = { id: 0, lang: "", translate: { from: "", to: "" } };
   selectionText = "";
   responseText = " not found";
   constructor() {
     this._translation = {
+      id: 0,
       lang: "",
       translate: { from: this.selectionText, to: this.responseText },
     };
@@ -150,6 +152,7 @@ class Translate {
         resContainer.getElementValue = req.getElement;
         this._translation.translate.to = this.responseText; //updates to: translate
         this._translation.translate.from = this.selectionText;
+        this._translation.id = Translate.insertID(this._translation.id);
         this.translations = this.translation; // this stores the new items in storage and updates this._items
         sendResponse(resContainer);
       }
@@ -166,10 +169,19 @@ class Translate {
       return convToString;
     }
   }
+  static insertID(id) {
+    //_trans = {id:0, lang: "", translate: { from: "", to: "" } };
+    if (!id || id === 0) {
+      id = Math.round(Math.random() * 1000);
+      return id;
+    }
+    return id;
+  }
 }
 
 class Speak {
   _speaks = [];
+  _speak = { speak: "", creation_date: "" };
   selectionText = "";
   constructor() {
     this.getSpeaks();
@@ -184,7 +196,14 @@ class Speak {
   getSpeaks() {
     chrome.storage.sync.get(["speaks"], (res) => {
       if (res && res.speaks && res.speaks.length) {
-        this._speaks = res.speaks;
+        if (!res.speaks.filter((speak) => speak.creation_date)) {
+          const newSpeaks = res.speaks.map((speak, index) => {
+            return Speak.addDateIfNotExist(speak);
+          });
+          this._speaks = newSpeaks;
+        } else {
+          this._speaks = res.speaks;
+        }
       } else {
         this._speaks = [];
         chrome.storage.sync.set({ speaks: [] });
@@ -195,72 +214,95 @@ class Speak {
   speakAction(selectionText) {
     // console.log("SPEAKACTION()-THIS.SPEAKS", this.speaks);
     if (!selectionText) return;
+    let today = new Date();
     chrome.tts.speak(selectionText, { rate: 0.7 });
-    this.speaks = [...this._speaks, selectionText];
+    this._speak = {
+      speak: selectionText,
+      creation_date: today.toLocaleDateString("en-US"),
+    };
+    this.speaks = [...this._speaks, this._speak];
     chrome.storage.sync.set({ speaks: this.speaks });
+  }
+  static addDateIfNotExist(speak) {
+    if (speak.creation_date === "") {
+      let today = new Date();
+      this._speak["creation_date"] = today.toLocaleDateString("en-US");
+      this._speak["speak"] = speak;
+    }
+    return this._speak;
   }
 }
 const start = new Speak();
 const tranStart = new Translate();
 
-class GoogleTranslateApp {
-  url = "https://translate.google.com";
-  _responseText = "";
+//######### getting URL ############//
+class AddNotes {
+  _form = {
+    id: 0,
+    url: "",
+    name: "",
+    description: "",
+    task: "",
+    phone: "",
+    complete: false,
+    creation_date: "",
+    modified_date: "",
+  };
+  tempForm = {
+    id: 0,
+    url: "",
+    name: "",
+    description: "",
+    task: "",
+    phone: "",
+    complete: false,
+  };
+
   _selectionText = "";
 
   constructor() {}
-  get responseText() {
-    return this._responseText;
+  get form() {
+    return this._form;
   }
-  set responseText(responseText) {
-    this._responseText = responseText;
-    chrome.storage.sync.set({
-      googleResponse: responseText,
-      selectionText: this.selectionText,
-    });
+  set form(form) {
+    this._form = form;
   }
-  get selectionText() {
-    return this._selectionText;
-  }
-  set selectionText(selectionText) {
-    this._selectionText = selectionText;
-  }
-  fromPopup() {
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      if (request.openTranslator === true) {
-        // console.log("request.openTranslator", request.openTranslator);
-        let popupParams = {
-          url: "https://translate.google.com",
-          type: "popup",
-          top: 5,
-          left: 0,
-        };
-        chrome.windows.create(popupParams);
-        sendResponse({ message: "done" });
-      }
-    });
-  }
-  //Not USED
-  googleAction(selectionText, from) {
-    let popupParams = {
-      url: this.url,
-      type: "popup",
-      top: 5,
-      left: 0,
-    };
-    chrome.windows.create(popupParams);
-    //ADDING INPUT TEXT INTO CONTEXT AND GETTING THE RESPONSE
-    this.sendGoogleTranslate(selectionText);
-  }
+  addToNotesAction(selectionText) {
+    let url = "http://something";
+    if (selectionText) {
+      chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
+        if (tabs[0].url) {
+          url = tabs[0].url;
+          const id = Math.round(Math.random() * 1000);
+          this.form = {
+            ...this.form,
+            id: id,
+            url: url,
+            description: selectionText,
+            name: "from the web",
+            task: " edit task in options",
+            complete: false,
+            creation_date: AddNotes.creationDate(),
+            modified_date: AddNotes.creationDate(),
+          };
 
-  sendGoogleTranslate(selectionText) {
-    chrome.runtime.sendMessage({ googleTranslate: selectionText }, (res) => {
-      if (res.getTranslation) {
-        this.responseText = res.getTranslation;
-      }
-    });
+          chrome.storage.sync.get(["forms"], (res) => {
+            if (res && res.forms) {
+              let forms = res.forms;
+              // console.log("res.forms", res.forms);
+              forms = [...forms, this.form];
+              chrome.storage.sync.set({ forms: forms });
+              this.form = this.tempForm; //initializing
+            }
+          });
+        }
+      });
+    }
+  }
+  static creationDate() {
+    let today = new Date();
+    return today.toDateString();
   }
 }
 
-const googleStart = new GoogleTranslateApp();
-googleStart.fromPopup();
+const addNotes = new AddNotes();

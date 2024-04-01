@@ -6,7 +6,8 @@ class TranslateWrapperMain {
     "To populate your list of translations and or voice calls, all you need to do is <span style='color:red; text-underline:underline;'>highlight</span> a text or a phrase on a web-page, right-click and select, under 'translation' the language you would like to translate the selected/highlighted text.<pre> try it out!</pre> ";
   _translations = [];
   _speaks = [];
-  _trans = { lang: "", translate: { from: "", to: "" } };
+  _speak = { speak: "", creation_date: "" };
+  _trans = { id: 0, lang: "", translate: { from: "", to: "" } };
   taskForm = { id: 0, url: "", name: "", description: "", task: "", phone: "" };
   openTranslator = false;
   constructor() {
@@ -24,6 +25,12 @@ class TranslateWrapperMain {
   set translations(translations) {
     this._translations = translations;
     console.log("set translations", translations);
+  }
+  get speak() {
+    return this._speak;
+  }
+  set speak(speak) {
+    this._speak = speak;
   }
   get speaks() {
     console.log("get speaks", this._speaks);
@@ -142,14 +149,15 @@ class TranslateWrapperMain {
 
       ulContainer_.appendChild(H6);
       translations.forEach((translation, index) => {
+        const newTrans = this.insertID(translation);
         const li = document.createElement("li");
         li.className = "translation mx-auto lean";
         li.style.cssText = "font-size:18px;";
-        li.innerHTML = `<span style="color:blue;text-decoration:underline">Lang: ${translation.lang}</span>
+        li.innerHTML = `<span style="color:blue;text-decoration:underline">Lang: ${newTrans.lang}</span>
                                 <ul class="d-flex flex-column justify-content-center align-items-start gap-1">
                                 <span style="color:blue; text-decoration:underline;">below:</span>
-                                <li>from:${translation.translate.from}</li>
-                                <li>to:${translation.translate.to}</li>
+                                <li>from:${newTrans.translate.from}</li>
+                                <li>to:${newTrans.translate.to}</li>
                                 </ul>
                                 `;
         ulContainer_.appendChild(li);
@@ -181,6 +189,7 @@ class TranslateWrapperMain {
       "text-decoration:underline;text-underline-offset:0.75rem;text-align:center;margin-inline:auto;.margin-block:1.5rem;margin-bottom:2rem;";
     H6.textContent = "Voice Calls";
     if (speaks && speaks.length > 0) {
+      const newSpeaks = speaks.map((speak) => this.adddateIfNotExist(speak));
       const speakLen = this.speaks.length >= 3 ? "300px" : "auto";
       const overfl = this.speaks.length >= 3 ? "overflow-y:scroll;" : "";
       this.translateWrapper.style.cssText =
@@ -191,12 +200,13 @@ class TranslateWrapperMain {
         "parentSpeaks d-flex flex-column justify-content-start align-items-start gap-1";
       ulContainer.style.cssText = `${overfl}height:${speakLen};`;
       ulContainer.appendChild(H6);
-      speaks.forEach((speak, index) => {
+      newSpeaks.forEach((speak, index) => {
         const li = document.createElement("li");
         li.className = " speak mx-auto";
         li.style.cssText = "margin-block:1rem;";
         li.innerHTML = `<span> voice:</span>
-                                <li>${index + 1}.) ${speak}</li>
+                                <li>${index + 1}.) ${speak.creation_date}</li>
+                                <ul><li> ${speak.speak}</li></ul>
                                 
                                 `;
         ulContainer.appendChild(li);
@@ -525,6 +535,23 @@ class TranslateWrapperMain {
     }
     return false;
   }
+  insertID(trans) {
+    //_trans = {id:0, lang: "", translate: { from: "", to: "" } };
+    if (!trans.id || !isNaN(trans.id)) {
+      trans.id = Math.round(Math.random() * 1000);
+      return trans;
+    }
+    return trans;
+  }
+  adddateIfNotExist(speak) {
+    if (!speak.creation_date) {
+      this._speak["creation_date"] = new Date().toLocaleDateString("en-US");
+      this._speak["speak"] = speak;
+      return this._speak;
+    } else {
+      return speak;
+    }
+  }
 }
 const start1 = new TranslateWrapperMain();
 
@@ -533,7 +560,15 @@ const start1 = new TranslateWrapperMain();
 class AddNotesMain {
   count = 0;
   tempForm = { id: 0, url: "", name: "", description: "", task: "", phone: "" };
-  _form = { id: 0, url: "", name: "", description: "", task: "", phone: "" };
+  _form = {
+    id: 0,
+    url: "",
+    name: "",
+    description: "",
+    task: "",
+    phone: "",
+    complete: false,
+  };
   _forms = [];
   para =
     "These keep track of your tasks. It helps you organize your tasks. 'add task' opens up a task form.'download' downloads your file to downloads and clears your list.<pre> Try it!</pre>";
@@ -546,10 +581,13 @@ class AddNotesMain {
       description: "",
       task: "",
       phone: "",
+      creation_date: "",
+      modified_date: "",
     };
     this.count = 0;
     this.addToNotes.className =
       " col-7 d-flex flex-column justify-content-start align-items-center gap-1.5 w-100";
+    this.addToNotes.style.cssText = "max-width:450px;";
     this.initialize(this.addToNotes);
   }
   get forms() {
@@ -764,7 +802,7 @@ class AddNotesMain {
     const form = document.createElement("form");
     form.setAttribute("form", "form");
     form.id = "formId";
-    form.style.cssText = "width:inherit;margin-inline:0px;padding-inline:5px;";
+    form.style.cssText = "width:100%;margin-inline:5px;padding-inline:5px;";
     parent.appendChild(H6);
     this.createGroupForm(form, "id", "id");
     this.createGroupForm(form, "input", "url");
@@ -866,7 +904,7 @@ class AddNotesMain {
   //THIS DISPLAYS DETAIL-popup
   formItemPopup(parent, id) {
     const css =
-      "margin-inline:0px;margin-block:0;display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;";
+      "margin-inline:0px;margin-block:0;display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;max-width:400px;text-wrap:wrap;";
     const form = this.forms.find((item) => item.id === id);
     const itemArr = this.sortConvertEntries(form);
     this.addToNotes.style.cssText =
@@ -878,9 +916,9 @@ class AddNotesMain {
       "margin-block:1rem;margin-inline:auto;text-align:center;";
     H6.textContent = "detail";
     const container = document.createElement("div");
-    container.className = "d-flex flex-column flex-wrap align-items-stretch;";
+    container.className = "d-flex flex-column flex-wrap align-items-stretch";
     container.style.cssText =
-      "position:absolute;inset:0px; width:100%;background:white;z-index:1;padding-inline:0.5rem;padding-inline:5x;margin-inline:0px;";
+      "position:absolute;inset:0px; max-width:450px;background:white;z-index:1;padding-inline:0.75rem;padding-inline:5x;margin-inline:0px;overflow-x:hidden;";
     const button = document.createElement("button");
     button.className = "btn btn-sm btn-info shadow";
     button.style.cssText = "margin-block:1rem;margin-inline:auto;";
@@ -892,9 +930,9 @@ class AddNotesMain {
         key_ = document.createElement("div");
         key_.className = "text-danger";
         if (key_ === "url") {
-          key_.innerHTML = `${
-            item.key
-          }<li class="text-primary"> ${this.splitNextLine(item.value)}</li>`;
+          key_.innerHTML = `${item.key}<li class="text-primary"><a href="${
+            item.value
+          }"> ${this.splitNextLine(item.value)}</a></li>`;
         } else {
           key_.innerHTML = `${item.key}:<li class="text-primary"> ${item.value}</li>`;
         }
@@ -1057,8 +1095,17 @@ class AddNotesMain {
     return newStr;
   }
   sortConvertEntries(form) {
-    // {"id":0,url:"",name:"",description:"",task:"",phone:""}
-    const sortArr = ["name", "task", "description", "url", "phone"];
+    // {"id":0,url:"",name:"",description:"",task:"",phone:"","creation_date","modified_date"}
+    const sortArr = [
+      "name",
+      "task",
+      "description",
+      "url",
+      "phone",
+      "complete",
+      "creation_date",
+      "modified_date",
+    ];
     let arr = [];
     sortArr.forEach((key_, index) => {
       for (const [key, value] of Object.entries(form)) {
@@ -1096,3 +1143,74 @@ class AddNotesMain {
   }
 }
 const addText = new AddNotesMain();
+
+//---------------HEADER EFFECT------------------------//////////////
+
+function style_Effect() {
+  const styleEffect = document.getElementById("styleEffect");
+  const heading = document.createElement("h3");
+  heading.className = "text-center lean display-6 text-primary mt-1";
+  const para = document.createElement("p");
+  const paraTwo = document.createElement("p");
+  para.className = "my-0 py-0";
+  paraTwo.className = "my-0 py-0";
+
+  paraTwo.style.opacity = "0";
+  paraTwo.textContent = "www.masterconnect.ca";
+  paraTwo.className = "text-primary";
+  heading.textContent = "Master Connect";
+  para.innerHTML = "Helping you Connect";
+  styleEffect.className =
+    "d-flex flex-column justify-content-center align-items-center mx-auto py-2 ";
+  styleEffect.style.cssText = "padding-inline:2rem;";
+  styleEffect.appendChild(heading);
+  styleEffect.appendChild(para);
+  styleEffect.appendChild(paraTwo);
+  para.style.fontSize = "large";
+  para.animate(
+    [
+      { transform: "rotateX(0deg)", color: "black" },
+      { transform: "rotateX(180deg)", color: "red" },
+      { transform: "rotateX(360deg)", color: "black" },
+    ],
+    {
+      duration: 6000,
+      iteration: 2,
+    }
+  );
+  setTimeout(() => {
+    paraTwo.style.opacity = "1";
+    paraTwo.animate(
+      [
+        { transform: "translateX(110%)", opacity: "0" },
+        { transform: "translateX(0%)", opacity: "1" },
+      ],
+      {
+        duration: 3000,
+        iteration: 1,
+      }
+    );
+  }, 6000);
+}
+style_Effect();
+
+/////--------------------OPEN OPTION PAGE-------/////////////
+function openOption() {
+  const openOption = document.getElementById("openOption");
+  const button = document.createElement("button");
+  button.className = "btn btn-sm btn-info shadow";
+  button.textContent = "open options";
+  openOption.appendChild(button);
+  button.addEventListener("click", (e) => {
+    if (e) {
+      if (chrome.runtime.openOptionPage) {
+        chrome.runtime.openOptionPage();
+      } else {
+        const url = chrome.runtime.getURL("options.html");
+        window.open(url);
+      }
+      close();
+    }
+  });
+}
+openOption();
