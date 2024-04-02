@@ -1,15 +1,15 @@
 {
-    "name": "Translation",
+    "name": "Note Adder",
     "version": "1",
     "manifest_version": 3,
-    "description": "all to translate",
+    "description": "allows you to organize your tasks.",
     "background": {
         "service_worker": "event-page.js",
         "type": "module"
     },
     "action": {
         "default_popup": "popup.html",
-        "default_title": "Translation",
+        "default_title": "Note Adder",
         "default_position": "right",
         "default_icon": {
             "128": "images/icon128.png",

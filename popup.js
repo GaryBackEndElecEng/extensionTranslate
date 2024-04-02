@@ -2,20 +2,32 @@
 
 class TranslateWrapperMain {
   count = 0;
-  explain =
-    "To populate your list of translations and or voice calls, all you need to do is <span style='color:red; text-underline:underline;'>highlight</span> a text or a phrase on a web-page, right-click and select, under 'translation' the language you would like to translate the selected/highlighted text.<pre> try it out!</pre> ";
+  explainTrans =
+    "To populate your list of translations. All you need to do is <span style='color:red; text-underline:underline;'>highlight</span> a word, on a web-page,<span class='fs-5 text-info'> right-click </span> and select, under 'translation' the french or Spanish you would like to translate the selected/highlighted text.<pre> try it out!</pre> ";
+  explainSpeak =
+    "To populate your notes, just <span style='color:red; text-underline:underline;'>highlight</span> a text or a phrase on a web-page, right-click and select, under <span class='text-info fs-5'>'translation'<span class='fs-4 text-danger'>==></span>(add to task / or add to notes)'</span> where you would like to store it.<pre> try it out!</pre> ";
   _translations = [];
   _speaks = [];
-  _speak = { speak: "", creation_date: "" };
+  _speak = { id: 0, url: "", speak: "", creation_date: "" };
   _trans = { id: 0, lang: "", translate: { from: "", to: "" } };
-  taskForm = { id: 0, url: "", name: "", description: "", task: "", phone: "" };
+  taskForm = {
+    id: 0,
+    url: "",
+    name: "",
+    description: "",
+    task: "",
+    phone: "",
+    complete: false,
+    creation_date: "",
+    modified_date: "",
+  };
   openTranslator = false;
   constructor() {
     this.translateWrapper = document.querySelector("div#translateWrapper");
     this.initialize(this.translateWrapper);
 
     this.translateWrapper.className =
-      " col-5 d-flex flex-column justify-content-start align-items-center border border-end-1 border-end-dark";
+      " col-6 d-flex flex-column justify-content-start align-items-center border border-end-1 border-end-dark";
     this.count = 0;
   }
   get translations() {
@@ -26,19 +38,19 @@ class TranslateWrapperMain {
     this._translations = translations;
     console.log("set translations", translations);
   }
-  get speak() {
-    return this._speak;
+  get speakNote() {
+    return this._speakNote;
   }
-  set speak(speak) {
-    this._speak = speak;
+  set speakNote(speakNote) {
+    this._speakNote = speakNote;
   }
-  get speaks() {
-    console.log("get speaks", this._speaks);
-    return this._speaks;
+  get speakNotes() {
+    console.log("get speaks", this._speakNotes);
+    return this._speakNotes;
   }
-  set speaks(speaks) {
-    this._speaks = speaks;
-    console.log("set speaks", speaks);
+  set speakNotes(speakNotes) {
+    this._speakNotes = speakNotes;
+    console.log("set speaks", speakNotes);
   }
   get trans() {
     return this._trans;
@@ -52,7 +64,7 @@ class TranslateWrapperMain {
       "d-flex flex-column justify-content-center align-items-center gap-1 my-2";
     const button = document.createElement("button");
     button.className = "btn btn-sm btn-success shadow m-1 text-sm mx-auto";
-    button.textContent = "open translater";
+    button.textContent = "GOOGLE Translator";
     container.appendChild(button);
     parent.appendChild(container);
     button.addEventListener("click", (e) => {
@@ -62,7 +74,7 @@ class TranslateWrapperMain {
           { openTranslator: this.openTranslator },
           (res) => {
             if (res.message === "done") {
-              // alert("done");//works
+              close();
             }
           }
         );
@@ -71,14 +83,14 @@ class TranslateWrapperMain {
   }
   //INITIALIZES DATA AND BUILDS COMPONENTS
   initialize(parent) {
-    chrome.storage.sync.get(["translations", "speaks"]).then((res) => {
+    chrome.storage.sync.get(["translations", "speakNotes"]).then((res) => {
       // console.log("res", res);
       this._translations = [];
-      this._speaks = [];
-      if (res && (res.translations || res.speaks)) {
+      this._speakNotes = [];
+      if (res && (res.translations || res.speakNotes)) {
         this.cleanUp(parent);
         this._translations = res.translations ? res.translations : [];
-        this._speaks = res.speaks ? res.speaks : [];
+        this._speakNotes = res.speakNotes ? res.speakNotes : [];
 
         if (res.translations && res.translations.length > 0) {
           this.showTranslations(parent, res.translations); //1.)CREATE TRANSLATIONS
@@ -87,17 +99,17 @@ class TranslateWrapperMain {
           this._translations = [];
           this.showTranslations(parent, this._translations); //REMOVES DATA
         }
-        if (res.speaks && res.speaks.length > 0) {
-          this.showSpeaks(parent, res.speaks); //2.) CREATES SPEAKS
+        if (res.speakNotes && res.speakNotes.length > 0) {
+          this.showSpeaks(parent, res.speakNotes); //2.) CREATES SPEAKS
         } else {
-          chrome.storage.sync.set({ speaks: [] });
-          this._speaks = [];
-          this.showSpeaks(parent, this._speaks); //CLEARS SPEAKS
+          chrome.storage.sync.set({ speakNotes: [] });
+          this._speakNotes = [];
+          this.showSpeaks(parent, this._speakNotes); //CLEARS SPEAKS
         }
 
         if (
           (res.translations && res.translations.length > 0) ||
-          (res.speaks && res.speaks.length > 0)
+          (res.speakNoteNotes && res.speakNoteNotes.length > 0)
         ) {
           this.downloadButtonEvent(parent); //CREATES OPEN GOOGLE TRANSLATOR
         }
@@ -117,11 +129,11 @@ class TranslateWrapperMain {
         if (changes.translations && changes.translations.newValue) {
           this.translations = changes.translations.newValue;
           this.showTranslations(parent, changes.translations.newValue); //newValue is sent only on change
-          this.showSpeaks(parent, this.speaks); //not changed
-        } else if (changes.speaks && changes.speaks.newValue) {
-          this.speaks = changes.speaks.newValue;
+          this.showSpeaks(parent, this.speakNotes); //not changed
+        } else if (changes.speakNotes && changes.speakNotes.newValue) {
+          this.speakNotes = changes.speakNotes.newValue;
           this.showTranslations(parent, this.translations); //unchanged
-          this.showSpeaks(parent, changes.speaks.newValue); //newValue is sent only on change
+          this.showSpeaks(parent, changes.speakNotes.newValue); //newValue is sent only on change
         }
       }
     });
@@ -174,24 +186,22 @@ class TranslateWrapperMain {
       parent.appendChild(H6);
       const para = document.createElement("p");
       para.className = "text-primary text-wrap m-1 p-1 w-100";
-      para.innerHTML = this.explain;
+      para.innerHTML = this.explainTrans;
       parent.appendChild(para);
     }
   }
   //BUILDS SPEAKS
   showSpeaks(parent, speaks) {
     this.count++;
-    console.log(this.count, "Speaks");
     parent.style.cssText = "";
     const H6 = document.createElement("h6");
     H6.className = "lean display-6";
     H6.style.cssText =
       "text-decoration:underline;text-underline-offset:0.75rem;text-align:center;margin-inline:auto;.margin-block:1.5rem;margin-bottom:2rem;";
-    H6.textContent = "Voice Calls";
+    H6.textContent = "Voice/Notes";
     if (speaks && speaks.length > 0) {
-      const newSpeaks = speaks.map((speak) => this.adddateIfNotExist(speak));
-      const speakLen = this.speaks.length >= 3 ? "300px" : "auto";
-      const overfl = this.speaks.length >= 3 ? "overflow-y:scroll;" : "";
+      const speakLen = this.speakNotes.length >= 3 ? "300px" : "auto";
+      const overfl = this.speakNotes.length >= 3 ? "overflow-y:scroll;" : "";
       this.translateWrapper.style.cssText =
         "margin-block:2rem;overflow-y:scroll;height:500px;";
       this.translateWrapper.className = "col";
@@ -200,13 +210,26 @@ class TranslateWrapperMain {
         "parentSpeaks d-flex flex-column justify-content-start align-items-start gap-1";
       ulContainer.style.cssText = `${overfl}height:${speakLen};`;
       ulContainer.appendChild(H6);
-      newSpeaks.forEach((speak, index) => {
+      speaks.forEach((speak, index) => {
+        this.speakNote = speak;
         const li = document.createElement("li");
         li.className = " speak mx-auto";
         li.style.cssText = "margin-block:1rem;";
-        li.innerHTML = `<span> voice:</span>
-                                <li>${index + 1}.) ${speak.creation_date}</li>
-                                <ul><li> ${speak.speak}</li></ul>
+        li.innerHTML = `<span class="text-danger fs-5"> Voice/Note:</span>
+                                <li><span class="fs-4 text-danger">${
+                                  index + 1
+                                }.)</span><span class="text-primary fs-6"> ${
+          speak.creation_date
+        }</span></li>
+                                <ul>
+                                <li><span class="fs-4 text-danger">url: </span><span class="fs-6 text-primary"> ${speak.url.slice(
+                                  8,
+                                  23
+                                )}...</span></li>
+                                <li><span class="fs-4 text-danger">Note:</span><span class="fs-6 text-primary">  ${
+                                  speak.speak
+                                }</span></li>
+                                </ul>
                                 
                                 `;
         ulContainer.appendChild(li);
@@ -225,7 +248,7 @@ class TranslateWrapperMain {
       parent.appendChild(H6);
       const para = document.createElement("p");
       para.className = "text-primary text-wrap m-1 p-1 w-100";
-      para.innerHTML = this.explain;
+      para.innerHTML = this.explainSpeak;
       parent.appendChild(para);
     }
   }
@@ -241,10 +264,10 @@ class TranslateWrapperMain {
     label.className = "text-sm";
     label.style.cssText =
       "text-decoration:underline;color:darkred;font-weight:normal;font-size:12px;";
-    label.for = `check${Math.round(Math.random() * 100)}`;
+    label.for = `check${index}-${type}`;
     const check = document.createElement("input");
     check.type = "checkbox";
-    check.id = `check${Math.round(Math.random() * 100)}`;
+    check.id = `check${index}-${type}`;
     check.style.cssText =
       "width:20px;height:20px;border-radius:10px 10px 10px 10px;";
     check.className = "form-control";
@@ -267,9 +290,9 @@ class TranslateWrapperMain {
       // alert(`${this.translations.length}-${remaining.length}`);
       chrome.storage.sync.set({ translations: remaining });
     } else if (type === "speak") {
-      const remaining = this.speaks.filter((ele, indx) => indx !== index);
-      this.speaks = remaining;
-      chrome.storage.sync.set({ speaks: remaining });
+      const remaining = this.speakNotes.filter((ele, indx) => indx !== index);
+      this.speakNotes = remaining;
+      chrome.storage.sync.set({ speakNotes: remaining });
     }
 
     // this.translateSpeakUpdate(parent); //cleansUp and rebuilds
@@ -339,30 +362,26 @@ class TranslateWrapperMain {
   }
   //CHILD TO downloadButtonEvent
   downloadFile(parent, filename) {
+    let csvText = "";
     if (filename) {
-      let csvText = "VOICE CALLS:\n ";
-      this.speaks.map((speak, index) => {
-        if (index !== this.speaks.length - 1) {
-          csvText += speak + "\n";
+      this.speakNotes.map((speak, index) => {
+        if (index === 0) {
+          csvText = "speak/note,creation_date,url\n";
+          csvText += `${speak.speak},${speak.creation_date},${speak.url}\n`;
         } else {
-          csvText += "\n";
+          csvText += `${speak.speak},${speak.creation_date},${speak.url}\n`;
         }
       });
       csvText += "TRANSLATIONS: \n";
       this.translations.map((trans, index) => {
-        csvText +=
-          "lang:" +
-          trans.lang +
-          "," +
-          "\n" +
-          " from: " +
-          trans.translate.from +
-          "\n" +
-          "to: " +
-          trans.translate.to +
-          "\n";
+        if (index === 0) {
+          csvText = "from Language,to Language\n";
+          csvText += `${trans.translate.from},${trans.translate.to}\n`;
+        } else {
+          csvText += `${trans.translate.from},${trans.translate.to}\n`;
+        }
       });
-      const file = `data:text/txt;filename=${filename}.txt;charset=utf-8,${csvText}\n`;
+      const file = `data:text/csv;filename=${filename}.txt;charset=utf-8,${csvText}\n`;
       const a = document.createElement("a");
       const encodeUri = encodeURI(file);
       a.href = encodeUri;
@@ -372,14 +391,14 @@ class TranslateWrapperMain {
       a.click();
       document.body.remove(a);
       this.translations = [];
-      this.speaks = [];
+      this.speakNotes = [];
       chrome.storage.sync.set({
         translations: this.translations,
-        speaks: this.speaks,
+        speakNotes: [],
       });
       this.cleanUp(parent);
       this.showTranslations(parent, this.translations); //unchanged
-      this.showSpeaks(parent, this.speaks);
+      this.showSpeaks(parent, this.speakNotes);
     }
   }
   //CHILD TO showSpeaks (Main Speak to Task entry)
@@ -397,18 +416,23 @@ class TranslateWrapperMain {
     child.appendChild(formGrp);
     checkBox.addEventListener("change", (e) => {
       if (e && e.currentTarget.checked) {
-        const speakSelText = this.speaks[index];
-        this.createTaskFormSend(parent, speakSelText, index);
+        this._speakNote = this.speakNotes[index];
+        this.createTaskFormSend(parent, this.speakNote, index);
       }
     });
   }
   //CHILD OF speakToTaskCheckBox()
-  createTaskFormSend(parent, speakSelText, index) {
-    const id = Math.round(Math.random() * 500);
+  createTaskFormSend(parent, speakNote, index) {
+    const id = Math.round(Math.random() * 1000);
     this.taskForm = {
       ...this.taskForm,
-      id: id,
-      description: speakSelText,
+      id: this._speakNote.id,
+      description: this._speakNote.speak,
+      url: this._speakNote.url,
+      creation_date: this._speakNote.creation_date,
+      modified_date: this._speakNote.creation_date,
+      name: "form notes",
+      task: "transferred from Notes",
     };
     const form_ = document.createElement("form");
     form_.style.cssText = "";
@@ -432,16 +456,19 @@ class TranslateWrapperMain {
         chrome.storage.sync.get(["forms"], (res) => {
           if (res && res.forms) {
             const taskForms = [...res.forms, this.taskForm];
-            this._speaks = this.speaks.filter((speak, indx) => {
-              indx !== index;
+            const newSpeaks = this.speakNotes.filter(
+              (speak, indx) => speak.id !== this.taskForm.id
+            );
+            this.speakNotes = newSpeaks;
+
+            chrome.storage.sync.set({
+              speakNotes: newSpeaks,
+              forms: taskForms,
             });
-
-            chrome.storage.sync.set({ speaks: this._speaks, forms: taskForms });
             parent.removeChild(form_);
-
             this.cleanUp(parent);
             this.showTranslations(parent, this.translations); //unchanged
-            this.showSpeaks(parent, this.speaks);
+            this.showSpeaks(parent, this._speakNotes);
           }
         });
       }
@@ -458,12 +485,22 @@ class TranslateWrapperMain {
     label.for = labelName;
     label.className = "form-check-label";
     let input;
-    if (type === "input") {
+    if (type === "input" && labelName !== "url") {
       label.textContent = labelName;
       input = document.createElement("input");
       input.ariaDescribedby = `Task ${labelName}`;
       input.placeholder = `task ${labelName}`;
       input.type = "text";
+      input.required = this.checkRequired(labelName);
+      input.minlength = "6";
+      input.style.cssText = "width:inherit;margin-inline:auto;";
+    } else if (type === "input" && labelName === "url") {
+      label.textContent = labelName;
+      input = document.createElement("input");
+      input.ariaDescribedby = `Task ${labelName}`;
+      input.placeholder = `task ${labelName}`;
+      input.type = "text";
+      input.value = this._speakNote.url ? this._speakNote.url : "";
       input.required = this.checkRequired(labelName);
       input.minlength = "6";
       input.style.cssText = "width:inherit;margin-inline:auto;";
@@ -586,7 +623,7 @@ class AddNotesMain {
     };
     this.count = 0;
     this.addToNotes.className =
-      " col-7 d-flex flex-column justify-content-start align-items-center gap-1.5 w-100";
+      " col-6 d-flex flex-column justify-content-start align-items-center gap-1.5 w-100";
     this.addToNotes.style.cssText = "max-width:450px;";
     this.initialize(this.addToNotes);
   }
@@ -905,6 +942,11 @@ class AddNotesMain {
   formItemPopup(parent, id) {
     const css =
       "margin-inline:0px;margin-block:0;display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;max-width:400px;text-wrap:wrap;";
+    const container = document.createElement("section");
+    const innerContainer = document.createElement("div");
+    innerContainer.className =
+      "position-relative mx-auto d-flex flex-column flex-wrap align-items-stretch my-3 w-100";
+    innerContainer.style.cssText = "min-height:900px;";
     const form = this.forms.find((item) => item.id === id);
     const itemArr = this.sortConvertEntries(form);
     this.addToNotes.style.cssText =
@@ -915,16 +957,17 @@ class AddNotesMain {
     H6.style.cssText =
       "margin-block:1rem;margin-inline:auto;text-align:center;";
     H6.textContent = "detail";
-    const container = document.createElement("div");
-    container.className = "d-flex flex-column flex-wrap align-items-stretch";
+    container.className =
+      "mx-auto d-flex flex-column flex-wrap align-items-stretch my-3";
     container.style.cssText =
-      "position:absolute;inset:0px; max-width:450px;background:white;z-index:1;padding-inline:0.75rem;padding-inline:5x;margin-inline:0px;overflow-x:hidden;";
+      "position:absolute;inset:-2rem 0px -100px 0px; max-width:450px;background:white;z-index:1;padding-inline:0.75rem;padding-inline:5px;margin-inline:0px;overflow-x:hidden;margin-block;2rem;height:500px;overflow-y:scroll;";
     const button = document.createElement("button");
-    button.className = "btn btn-sm btn-info shadow";
-    button.style.cssText = "margin-block:1rem;margin-inline:auto;";
-    button.textContent = "close";
+    button.className = " popupBUTTON btn btn-sm btn-primary shadow";
+    button.style.cssText =
+      "margin-block:1.5rem;margin-inline:auto;opacity:1;z-index:2000;";
+    button.textContent = "close here we are!!";
     if (itemArr) {
-      container.appendChild(H6);
+      innerContainer.appendChild(H6);
       itemArr.forEach((item, index) => {
         let key_ = item.key;
         key_ = document.createElement("div");
@@ -938,10 +981,11 @@ class AddNotesMain {
         }
         key_.style.cssText = css;
         if (item.value) {
-          container.appendChild(key_);
+          innerContainer.appendChild(key_);
         }
       });
-      container.appendChild(button);
+      innerContainer.appendChild(button);
+      container.appendChild(innerContainer);
       parent.appendChild(container);
       button.addEventListener("click", (e) => {
         if (e) {
@@ -1214,3 +1258,78 @@ function openOption() {
   });
 }
 openOption();
+
+////------FOOTER---------------------------//////////////////////////
+class Footer {
+  constructor() {
+    this.footerLogo = document.querySelector("footer > div#footerLogo");
+    this.privacy = document.querySelector("footer > div#privacy");
+    this.logoEffect(this.footerLogo);
+    this.url = "https://www.masterconnect.ca/privacy";
+    this.openWindow(this.privacy);
+  }
+
+  logoEffect(parent) {
+    const logo = "./images/icon128.png";
+    const img = document.createElement("img");
+    img.src = logo;
+    img.alt = "www.masterconnect.ca";
+    img.style.cssText =
+      "height:100%;filter:drop-shadow(0 0 0.75rem,black);border-radius:inherit;";
+    const section = document.createElement("section");
+    const div = document.createElement("div");
+    div.style.cssText = "border-radius:20px;opacity:1;";
+    div.className =
+      "position-relative d-flex flex-column justify-content-center align-items-center";
+    div.setAttribute("ref", "ref");
+    div.appendChild(img);
+    section.appendChild(div);
+    parent.appendChild(section);
+    section.className = "position-relative px-1 w-100";
+    const observer = new IntersectionObserver(
+      (entries) => {
+        let entry = entries[0];
+        if (entry.isIntersecting) {
+          div.style.cssText =
+            "border-radius:20px;opacity:1;height:100px;padding-block:1rem;margin-block:1rem;";
+          img.style.cssText =
+            "display:block;border-radius:inherit;height:inherit;";
+          div.animate(
+            [
+              {
+                opacity: 0,
+                borderRadius: "0px",
+                transform: "translateX(-50%)",
+              },
+              {
+                opacity: 1,
+                borderRadius: "20px",
+                transform: "translateX(0%)",
+              },
+            ],
+            { duration: 1000, iteration: 1 }
+          );
+        } else {
+          div.style.cssText = "border-radius:0px;opacity:0;";
+          img.style.cssText = "display:none;";
+        }
+      },
+      { threshold: 0.5 }
+    );
+    observer.observe(div);
+  }
+  openWindow(parent) {
+    parent.className = "text-light text-center text-decoration-none fs-4";
+    const button = document.createElement("a");
+    button.textContent = "privacy";
+    button.type = "button";
+    parent.appendChild(button);
+    button.addEventListener("click", (e) => {
+      if (e) {
+        e.preventDefault();
+        window.open(this.url);
+      }
+    });
+  }
+}
+const footer = new Footer();

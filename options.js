@@ -64,7 +64,7 @@ class FormControl {
   _forms = [];
   constructor() {
     this.formcontrol = document.getElementById("formcontrol");
-    this.formcontrol.className = " col-6 shadow-md position-relative ";
+    this.formcontrol.className = " col-md-6 shadow-md position-relative ";
     // this.formcontrol.style.cssText =
     //   "background:linear-gradient(to bottom,darkgrey,whitesmoke);";
     this.initialize(this.formcontrol);
@@ -86,8 +86,9 @@ class FormControl {
     chrome.storage.sync.get(["forms"], (res) => {
       if (res && res.forms) {
         const newForms = FormControl.addCheckToForms(res.forms); //adds {complete:false}/creation_date/modified_date if !exist
-        this.forms = newForms;
-        this.displayForms(parent, newForms);
+        //DOES NOT SET COMPLETE=TRUE;
+        this.forms = res.forms;
+        this.displayForms(parent, res.forms);
       }
     });
   }
@@ -112,6 +113,7 @@ class FormControl {
   }
   //CHILD TO displayForms:displays component(LOOPING)
   displayComponent(parent, form) {
+    this.form = form;
     const container = document.createElement("section");
     container.className =
       " d-flex flex-column gap-0 px-1 position-relative shadow-md py-2";
@@ -123,6 +125,8 @@ class FormControl {
     this.createEditEvent(container, form, "edit");
     //EACH FORM FORMAT(LOOPING)
     this.form = form;
+    form["complete"] = form.complete;
+    console.log("complete", form.complete);
     const containerDates = document.createElement("div");
     containerDates.className =
       "d-flex justify-content-center align-content-center gap-1";
@@ -132,6 +136,7 @@ class FormControl {
         const id = document.createElement("p");
         id.textContent = `${item.value}`;
         id.className = "fs-6 text-primary";
+        id.hidden = true;
         container.appendChild(id);
       } else if (item.key === "name") {
         const name = document.createElement("p");
@@ -177,8 +182,6 @@ class FormControl {
         url.className = "text-warning";
         container.appendChild(url);
       } else if (item.key === "complete") {
-        // console.log("form", form, "complete", item.key, "checked", item.value);
-
         const formGrp = document.createElement("div");
         const label = document.createElement("label");
         formGrp.className =
@@ -188,7 +191,7 @@ class FormControl {
         label.textContent = "complete";
         const complete = document.createElement("input");
         complete.type = "checkbox";
-        complete.checked = item.value;
+        complete.checked = Boolean(item.value) === false ? false : true;
         complete.name = "complete";
         complete.id = `idID${form.id}`;
         complete.style.cssText =
@@ -612,6 +615,7 @@ class FormControl {
   }
   static sortForm(form) {
     let arr = [
+      "id",
       "name",
       "task",
       "description",
@@ -737,13 +741,17 @@ class FormControl {
 const formcontrol = new FormControl();
 
 class TransControl {
+  explainTrans =
+    "To populate your list of translations. All you need to do is <span style='color:red; text-underline:underline;'>highlight</span> a word, on a web-page,<span class='fs-5 text-info'> right-click </span> and select, under 'translation' the french or Spanish you would like to translate the selected/highlighted text.<pre> try it out!</pre> ";
+  explainSpeak =
+    "To populate your notes, just <span style='color:red; text-underline:underline;'>highlight</span> a text or a phrase on a web-page, right-click and select, under <span class='text-info fs-5'>'translation'<span class='fs-4 text-danger'>==></span>(add to task / or add to notes)'</span> where you would like to store it.<pre> try it out!</pre> ";
   limit = 700;
   _trans = { id: 0, lang: "", translate: { from: "", to: "" } };
   count1 = 0;
   count = 0;
   _translations = [];
-  _speaks = [];
-  _speak = { creation_dat: "", speak: "" };
+  _speakNotes = [];
+  _speakNote = { id: 0, url: "", creation_date: "", speak: "" };
 
   constructor() {
     this.translation = document.getElementById("translation");
@@ -763,17 +771,17 @@ class TransControl {
   set translation(trans) {
     this._trans = trans;
   }
-  get speak() {
-    return this._speak;
+  get speakNote() {
+    return this._speakNote;
   }
-  set speak(speak) {
-    this._speak = speak;
+  set speakNote(speakNote) {
+    this._speakNote = speakNote;
   }
-  get speaks() {
-    return this._speaks;
+  get speakNotes() {
+    return this._speakNotes;
   }
-  set speaks(speaks) {
-    this._speaks = speaks;
+  set speakNotes(speakNotes) {
+    this._speakNotes = speakNotes;
   }
   //ROOT ENTRY
   mainTranslations(parent) {
@@ -789,10 +797,10 @@ class TransControl {
     speakTitle.textContent = "Voice / Notes";
     speakTitle.className = "lean display-6 text-center my-1 text-primary";
     transTitle.className = "lean display-6 text-center my-1 text-primary";
-    chrome.storage.sync.get(["translations", "speaks"], (res) => {
-      if (res && (res.translations || res.speaks)) {
+    chrome.storage.sync.get(["translations", "speakNotes"], (res) => {
+      if (res && (res.translations || res.speakNotes)) {
         this.translations = res.translations ? res.translations : [];
-        this.speaks = res.speaks ? res.speaks : [];
+        this.speakNotes = res.speakNotes ? res.speakNotes : [];
         parent.appendChild(transTitle);
         parent.appendChild(hr);
         if (this.translations.length > 0) {
@@ -804,22 +812,23 @@ class TransControl {
             }
           });
         } else {
-          this.inforClientWhenEmpty(parent);
+          this.inforClientWhenEmptyTrans(parent);
         }
         parent.appendChild(speakTitle);
         parent.appendChild(hr1);
-        if (this.speaks.length > 0) {
-          this.speaks.forEach((speak, index) => {
+        if (this.speakNotes.length > 0) {
+          this.speakNotes.forEach((speak, index) => {
             if (speak) {
               this.count1++;
               this.createSpeak(parent, speak);
             }
           });
         } else {
-          this.inforClientWhenEmpty(parent);
+          this.inforClientWhenEmptySpeak(parent);
         }
         this.openNoteFormBtn(parent);
         TransControl.setOverflowHeight(parent, this.limit);
+        this.removeAllItems(parent);
       }
     });
   }
@@ -859,7 +868,7 @@ class TransControl {
   }
   //LOOPS-COMPONENT CHILD OF ROOT ENTRY- mainTransactions()
   createSpeak(parent, speak) {
-    const newSpeak = this.addCreationDateIfNotExist(speak);
+    const newSpeak = this.addCreationDateIfNotExist(speak); //adds data and ID
     const section = document.createElement("section");
     section.id = "speak";
     section.className =
@@ -870,9 +879,10 @@ class TransControl {
     para.className = "px-3 fs-6 lean";
     para.innerHTML = `<span class="text-danger">Vc/Nt: ${this.count1}.) </span>
     <ul>${newSpeak.creation_date}
-    <li>${newSpeak.speak}</li>
+    <li>speak: ${newSpeak.speak}</li>
+    <li>speak: ${newSpeak.url}</li>
     </ul>`;
-    this.deleteSpeak(parent, section, speak, this.count1); //DELETES
+    this.deleteSpeak(parent, section, newSpeak, this.count1); //DELETES
     section.appendChild(para);
 
     parent.appendChild(section);
@@ -891,8 +901,6 @@ class TransControl {
       if (e) {
         chrome.storage.sync.get(["translations"], (res) => {
           if (res && res.translations) {
-            console.log("Trans.id", trans.id, trans);
-            console.log(res.translations);
             this.translations = res.translations.filter(
               (trans_) => trans_.id !== trans.id
             );
@@ -901,6 +909,48 @@ class TransControl {
             this.mainTranslations(parent);
           }
         });
+      }
+    });
+  }
+  removeAllItems(parent) {
+    const classBtn = "btn btn-warning btn-sm text-center shadow-md";
+    const BtnStyle = "border-radius:10px;";
+    const buttonTrans = document.createElement("button");
+    const buttonSpeak = document.createElement("button");
+    buttonTrans.className = classBtn;
+    buttonSpeak.className = classBtn;
+    buttonSpeak.textContent = "clear notes";
+    buttonTrans.textContent = "clear Translations";
+    buttonTrans.style.cssText = BtnStyle;
+    buttonSpeak.style.cssText = BtnStyle;
+    const section = document.createElement("section");
+    section.className =
+      "d-flex flex-row flex-wrap justify-content-center align-content-center gap-1 my-2";
+    if (this.translations.length > 0) {
+      section.appendChild(buttonTrans);
+    }
+    if (this.speakNotes.length > 0) {
+      section.appendChild(buttonSpeak);
+    }
+    parent.appendChild(section);
+    buttonSpeak.addEventListener("click", (e) => {
+      if (e) {
+        e.preventDefault();
+        this._speakNotes = [];
+        this._speakNote = { id: 0, url: "", creation_date: "", speak: "" };
+        chrome.storage.sync.set({ speakNotes: [] });
+        TransControl.cleanUp(parent);
+        this.mainTranslations(parent);
+      }
+    });
+    buttonTrans.addEventListener("click", (e) => {
+      if (e) {
+        e.preventDefault();
+        this._translations = [];
+        this._trans = { id: 0, lang: "", translate: { from: "", to: "" } };
+        chrome.storage.sync.set({ translations: [] });
+        TransControl.cleanUp(parent);
+        this.mainTranslations(parent);
       }
     });
   }
@@ -916,12 +966,12 @@ class TransControl {
     section.appendChild(img);
     img.addEventListener("click", (e) => {
       if (e) {
-        chrome.storage.sync.get(["speaks"], (res) => {
-          if (res && res.speaks) {
-            this.speaks = res.speaks.filter(
-              (speak_, index) => index !== count - 1
+        chrome.storage.sync.get(["speakNotes"], (res) => {
+          if (res && res.speakNotes) {
+            this.speakNotes = res.speakNotes.filter(
+              (speak_, index) => speak_.id !== speak.id
             );
-            chrome.storage.sync.set({ speaks: this.speaks });
+            chrome.storage.sync.set({ speakNotes: this.speakNotes });
             TransControl.cleanUp(parent);
             this.mainTranslations(parent);
           }
@@ -949,7 +999,7 @@ class TransControl {
     });
   }
   createNoteForm(parent) {
-    //require a btn to open
+    this._speakNote = this.addCreationDateIfNotExist(this._speakNote); //adds date and ID if not exist
     const section = document.createElement("section");
     section.style.cssText =
       "width:600px;margin-inline:auto;background:whitesmoke;";
@@ -969,33 +1019,62 @@ class TransControl {
     label.style.cssText =
       "text-decoration:underline; text-underline-offset:0.7rem;margin-bottom:1.25rem;";
     textarea.id = "textarea";
-    textarea.name = "textarea";
+    textarea.name = "speak";
     textarea.rows = "6";
     const button = document.createElement("button");
     button.className = "btn btn-primary btn-sm shadow-sm";
     button.textContent = "save and close";
     button.type = "submit";
     textarea.className = "w-100";
+    const formGrp1 = document.createElement("div");
+    formGrp1.className =
+      "form-group d-flex flex-column justify-content-center align-items-center";
+    const input = document.createElement("input");
+    input.name = "url";
+    input.className = "form-control";
+    const labell = document.createElement("label");
+    labell.textContent = "url (optional)";
+    labell.for = "nameinput";
+    input.id = "nameinput";
+    formGrp1.appendChild(labell);
+    formGrp1.appendChild(input);
     formGrp.appendChild(label);
     formGrp.appendChild(textarea);
+    form.appendChild(formGrp1);
     form.appendChild(formGrp);
     form.appendChild(button);
     section.appendChild(form);
     parent.appendChild(section);
+    input.addEventListener("change", (e) => {
+      if (e) {
+        input.value = e.currentTarget.value;
+        this.speakNote = {
+          ...this._speakNote,
+          [e.currentTarget.name]: e.currentTarget.value,
+        };
+      }
+    });
     textarea.addEventListener("change", (e) => {
       if (e) {
         textarea.value = e.currentTarget.value;
+        this.speakNote = {
+          ...this._speakNote,
+          [e.currentTarget.name]: e.currentTarget.value,
+        };
       }
     });
     button.addEventListener("click", (e) => {
       if (e && textarea.value) {
         e.preventDefault();
-        textarea.value =
-          `<p class="text-success fs-5 pb-0">NOTE:</p> ` + textarea.value;
-        chrome.storage.sync.get(["speaks"], (res) => {
-          if (res && res.speaks) {
-            this.speaks = [...res.speaks, textarea.value];
-            chrome.storage.sync.set({ speaks: this.speaks });
+        this._speakNote = {
+          ...this.speakNote,
+          speak: `NOTE: ${this._speakNote.speak}`,
+        };
+        console.log("speakNote", this.speakNote);
+        chrome.storage.sync.get(["speakNotes"], (res) => {
+          if (res && res.speakNotes) {
+            this.speakNotes = [...res.speakNotes, this.speakNote];
+            chrome.storage.sync.set({ speakNotes: this.speakNotes });
             TransControl.cleanUp(parent);
             this.mainTranslations(parent);
           }
@@ -1004,22 +1083,51 @@ class TransControl {
     });
   }
   //FILL FOR EMPTY LIST
-  inforClientWhenEmpty(parent) {
+  inforClientWhenEmptyTrans(parent) {
     const section = document.createElement("section");
+    const hr = document.createElement("hr");
+    hr.className = " mx-3";
+    hr.style.cssText =
+      "width:200px; height:2px; background:black;box-shadow:1px 1px 5px 1px black;margin-block:1rem;";
     section.className =
       "d-flex flex-column justify-content-center align-content-center px-1 mx-auto";
     const img = document.createElement("img");
     img.src = "./images/fill.png";
     img.alt = "www.masterconnect.ca";
     img.style.cssText =
-      "max-width:600px;aspect-ratial:auto;filter:drop-shadow(0 0 0.5rem darkgrey);border-radius:10px;";
+      "max-width:250px;aspect-ratial:auto;filter:drop-shadow(0 0 0.5rem darkgrey);border-radius:10px;";
     img.fetchPriority = "high";
     const para = document.createElement("p");
     para.className = "text-wrap text-center mx-auto my-2";
     const smile =
       "<span><img src='./images/icon16.png' alt='www.masterconnect.ca' style='border-radius:50%;background:white;box-shadow:1px 1px 6px 1px black;'/></span>";
-    para.innerHTML = `Thank-you for downloading the application to help you <code>organize</code> your affairs and learn <code>languages</code>.To begin, just <code>click</code> on the below button to add a thought, to get you started.<pre> again, we thank you for connecting with us!</pre>,<span class="d-inline"> <blockquote>Gary Wallace   ${smile}</blockquote></span><blockquote>www.masterconnect.ca</blockquote>`;
+    para.innerHTML = `Thank-you for downloading the application to help you <code>organize</code> your affairs and learn <code>languages</code>.To begin, just <code>click</code> on the below button to add a thought, to get you started.<pre> enjoy!</pre>,<span class="d-inline"> <blockquote>Gary Wallace   ${smile}</blockquote></span><blockquote>www.masterconnect.ca</blockquote>`;
     section.appendChild(para);
+    section.appendChild(hr);
+    // section.appendChild(img);
+    parent.appendChild(section);
+  }
+  inforClientWhenEmptySpeak(parent) {
+    const section = document.createElement("section");
+    const hr = document.createElement("hr");
+    hr.className = " mx-3";
+    hr.style.cssText =
+      "width:200px; height:2px; background:black;box-shadow:1px 1px 5px 1px black;margin-block:1rem;";
+    section.className =
+      "d-flex flex-column justify-content-center align-content-center px-1 mx-auto";
+    const img = document.createElement("img");
+    img.src = "./images/fill.png";
+    img.alt = "www.masterconnect.ca";
+    img.style.cssText =
+      "max-width:200px;aspect-ratial:auto;filter:drop-shadow(0 0 0.5rem darkgrey);border-radius:10px;";
+    img.fetchPriority = "high";
+    const para = document.createElement("p");
+    para.className = "text-wrap text-center mx-auto my-2";
+    const smile =
+      "<span><img src='./images/icon16.png' alt='www.masterconnect.ca' style='border-radius:50%;background:white;box-shadow:1px 1px 6px 1px black;'/></span>";
+    para.innerHTML = `Thank-you for downloading the application to help you <code>organize</code> your affairs on <code>Google</code>.To begin, just <code>click</code> on the below button to add a note, OR <code>highlight</code>, then rightclick a text within Goggle's amazing pages.<pre> hope you like it!</pre>,<span class="d-inline"> <blockquote>Gary Wallace   ${smile}</blockquote></span><blockquote>www.masterconnect.ca</blockquote>`;
+    section.appendChild(para);
+    section.appendChild(hr);
     section.appendChild(img);
     parent.appendChild(section);
   }
@@ -1048,9 +1156,13 @@ class TransControl {
     }
   }
   addCreationDateIfNotExist(speak) {
-    if (!speak.creation_date) {
-      let today = new Date().toLocaleTimeString("en-US");
-      this._speak = { creation_date: today, speak: speak };
+    if (!speak.creation_date && speak.id === 0) {
+      const date = new Date();
+      let today = `${date.toLocaleDateString(
+        "en-US"
+      )},${date.toLocaleTimeString("en-US")}`;
+      let id = Math.round(Math.random() * 1000);
+      this._speak = { id, creation_date: today, speak: speak, url: "" };
       return this._speak;
     } else {
       return speak;

@@ -7,27 +7,32 @@
 
 let menulangFr = {
   id: "french",
-  title: "translate to french",
+  title: "word translate to french",
   contexts: ["selection"],
 };
 let menulangSp = {
   id: "spanish",
-  title: "translate to spanish",
+  title: "word translate to spanish",
   contexts: ["selection"],
 };
 let menulangEn = {
   id: "english",
-  title: "translate to english",
+  title: "word translate to english",
   contexts: ["selection"],
 };
 let menuitemTwo = {
   id: "speak",
-  title: "speak",
+  title: "speak a phrase and Add to notes",
   contexts: ["selection"],
 };
-let addtonotes = {
+let addtoTasks = {
+  id: "addToTasks",
+  title: "add a slective text to tasks",
+  contexts: ["selection"],
+};
+let addtoNotes = {
   id: "addToNotes",
-  title: "adds text to tasks",
+  title: "adds a selective text to notes",
   contexts: ["selection"],
 };
 chrome.runtime.onInstalled.addListener(() => {
@@ -35,7 +40,8 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create(menulangEn);
   chrome.contextMenus.create(menulangSp);
   chrome.contextMenus.create(menuitemTwo);
-  chrome.contextMenus.create(addtonotes);
+  chrome.contextMenus.create(addtoTasks);
+  chrome.contextMenus.create(addtoNotes);
   //BELOW WHEN OPENING UP ANOTHER CHROME WINDOW, IT EXECUTES THE CONTEXT PAGE
   //   chrome.action.onClicked.addListener((tab) => {
   //     chrome.scripting.executeScript({
@@ -54,10 +60,11 @@ chrome.contextMenus.onClicked.addListener((res) => {
     } else if (res.menuItemId === "english") {
       tranStart.translateAction(res.selectionText, "english");
     } else if (res.menuItemId === "speak") {
-      start.speakAction(res.selectionText);
+      startSpeak.speakAction(res.selectionText);
+    } else if (res.menuItemId === "addToTasks") {
+      addNotes.addToTasksAction(res.selectionText);
     } else if (res.menuItemId === "addToNotes") {
-      console.log("selected executing method");
-      addNotes.addToNotesAction(res.selectionText);
+      startSpeak.addToNotesAction(res.selectionText);
     }
   }
 });
@@ -143,6 +150,7 @@ class Translate {
       getTranslation: false,
       getElementValue: "",
     };
+
     chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
       //GETTING TRANSLATION FROM CONTEXT.JS (req.getElement=translation text)
       if (req.getElement) {
@@ -155,6 +163,28 @@ class Translate {
         this._translation.id = Translate.insertID(this._translation.id);
         this.translations = this.translation; // this stores the new items in storage and updates this._items
         sendResponse(resContainer);
+      }
+    });
+  }
+  openTranlator() {
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      const url = "https://translate.google.com/";
+      let response = { message: "done", id: 0 };
+
+      if (request.openTranslator) {
+        let popupParams = {
+          url: url,
+          type: "popup",
+          top: 5,
+          left: 0,
+        };
+
+        chrome.windows.create(popupParams);
+        chrome.windows.getCurrent((res) => {
+          response["id"] = res.id;
+          response["message"] = "done"; //have to stor value in storage or runtime.sendMessage().
+        });
+        sendResponse(response);
       }
     });
   }
@@ -178,35 +208,31 @@ class Translate {
     return id;
   }
 }
+const tranStart = new Translate();
+tranStart.openTranlator();
 
 class Speak {
-  _speaks = [];
-  _speak = { speak: "", creation_date: "" };
+  _speakNotes = [];
+  _speakNote = { id: 0, url: "", speak: "", creation_date: "" };
   selectionText = "";
   constructor() {
-    this.getSpeaks();
+    this.getSpeakNotes();
   }
 
-  get speaks() {
-    return this._speaks;
+  get speakNotes() {
+    return this._speakNotes;
   }
-  set speaks(speaks) {
-    this._speaks = speaks;
+  set speakNotes(speakNotes) {
+    this._speakNotes = speakNotes;
   }
-  getSpeaks() {
-    chrome.storage.sync.get(["speaks"], (res) => {
-      if (res && res.speaks && res.speaks.length) {
-        if (!res.speaks.filter((speak) => speak.creation_date)) {
-          const newSpeaks = res.speaks.map((speak, index) => {
-            return Speak.addDateIfNotExist(speak);
-          });
-          this._speaks = newSpeaks;
-        } else {
-          this._speaks = res.speaks;
-        }
+  getSpeakNotes() {
+    chrome.storage.sync.get(["speakNotes"], (res) => {
+      if (res && res.speakNotes && res.speakNotes.length) {
+        this._speakNotes = res.speakNotes;
       } else {
-        this._speaks = [];
-        chrome.storage.sync.set({ speaks: [] });
+        this._speakNotes = [];
+        chrome.storage.sync.set({ speakNotes: [] });
+        chrome.storage.sync.remove("speaks");
       }
     });
   }
@@ -216,24 +242,66 @@ class Speak {
     if (!selectionText) return;
     let today = new Date();
     chrome.tts.speak(selectionText, { rate: 0.7 });
-    this._speak = {
-      speak: selectionText,
-      creation_date: today.toLocaleDateString("en-US"),
-    };
-    this.speaks = [...this._speaks, this._speak];
-    chrome.storage.sync.set({ speaks: this.speaks });
+    chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
+      if (tabs[0].url) {
+        let newID = Math.round(Math.random() * 1000);
+        this._speakNote = {
+          id: newID,
+          url: tabs[0].url,
+          speak: selectionText,
+          creation_date: today.toLocaleDateString("en-US"),
+        };
+        chrome.storage.sync.get(["speakNotes"], (res) => {
+          if (res && res.speakNotes) {
+            this.speakNotes = [...res.speakNotes, this._speakNote];
+            chrome.storage.sync.set({ speakNotes: this.speakNotes });
+          } else {
+            this._speakNotes = [];
+            chrome.storage.remove("speak");
+            chrome.storage.sync.set({ speakNotes: [] });
+          }
+        });
+      }
+    });
+  }
+  addToNotesAction(selectionText) {
+    if (selectionText) {
+      chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
+        if (tabs[0].url) {
+          const url = tabs[0].url;
+          const id = Math.round(Math.random() * 1000);
+          this._speakNote = {
+            id: id,
+            url: url,
+            speak: selectionText,
+            creation_date: AddNotes.creationDate(),
+          };
+
+          chrome.storage.sync.get(["speakNotes"], (res) => {
+            if (res && res.speakNotes) {
+              this.speakNotes = res.speakNotes;
+              // console.log("res.forms", res.forms);
+              this.speakNotes = [...res.speakNotes, this._speakNote];
+              chrome.storage.sync.set({ speakNotes: this._speakNotes });
+            } else {
+              chrome.storage.remove("speak");
+              chrome.storage.sync.set({ speakNotes: [] });
+            }
+          });
+        }
+      });
+    }
   }
   static addDateIfNotExist(speak) {
     if (speak.creation_date === "") {
       let today = new Date();
       this._speak["creation_date"] = today.toLocaleDateString("en-US");
-      this._speak["speak"] = speak;
+      this._speakNote["speak"] = speak;
     }
     return this._speak;
   }
 }
-const start = new Speak();
-const tranStart = new Translate();
+const startSpeak = new Speak();
 
 //######### getting URL ############//
 class AddNotes {
@@ -267,7 +335,7 @@ class AddNotes {
   set form(form) {
     this._form = form;
   }
-  addToNotesAction(selectionText) {
+  addToTasksAction(selectionText) {
     let url = "http://something";
     if (selectionText) {
       chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
@@ -299,6 +367,7 @@ class AddNotes {
       });
     }
   }
+
   static creationDate() {
     let today = new Date();
     return today.toDateString();

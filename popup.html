@@ -19,8 +19,8 @@
             height:20px;
             width:100%;
             margin:0px;
-            background:black;
-            box-shadow:1px 1px 6px 1px black;
+            background:linear-gradient(to bottom, black,white);
+            
         }
         header{
             min-height:100px;
@@ -79,12 +79,16 @@
             max-height:100%;
         }
         footer{
-            min-height:100px;
+            max-height:100px;
             width:100%;
             display:flex;
+            position:relative;
             align-items:center;
             justify-content:space-between;
             padding-inline:2rem;
+            background:linear-gradient(to top, black,white);
+            margin-top:1.5rem;
+            
         }
     </style>
 </head>
@@ -97,17 +101,18 @@
     </header>
     <div class="divider"></div>
     <div class="row mx-auto">
-        <div id="translateWrapper" class="col-5 mx-auto d-flex flex-column justify-content-start align-items-center gap-1" >
+        <div id="translateWrapper" class="col-6 mx-auto d-flex flex-column justify-content-start align-items-center gap-1" >
             
         </div>
-        <div id="addToNotes" class=" col-7 mx-auto d-flex flex-column justify-content-start align-items-center gap-1">
+        <div id="addToNotes" class=" col-6 mx-auto d-flex flex-column justify-content-start align-items-center gap-1">
             
         </div>
     </div>
-    <footer>
-        <div><p>somthing here</p></div>
-        <div><p>something here</p></div>
-        <div><p>something here</p></div>
+    <footer >
+        <div id="footerLogo"></div>
+        <div><p class="text-light fs-4">Specialized in connecting!</p></div>
+        <div id="privacy"></div>
+        
     </footer>
 </body>
 <script defer src="./popup.js"></script>
